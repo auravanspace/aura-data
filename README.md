@@ -13,5 +13,14 @@
 1. 用于育种的基因谱系聚类分析
 你的任务是忽略相关背景信息，根据给出reference画出最终图片。
 ![alt text](lQDPKH_iY4DQp3_NAXvNAsCw_DkPLdlJjEcH4hLyUQWSAA_704_379-1.jpg)
+
 上面是我完成的，很丑陋但是跑通了。下面是分享源码后客户自己完成的内容。beautiful。
+
+
 ![alt text](lQDPJxbScTZAqH_NAXXNAyCwnIiZGqmu8LAH4hLz88KMAA_800_373.jpg)
+by the way 你可以尝试一下posit could,在这个界面用r studio的感觉还是蛮奇妙的。上面这个案例就是在posit cloud完成的。
+
+2. 奇怪的社会支持度分析（回归）
+一个心理学学生的社会调查问卷分析，结论很好玩：独立程度影响相关信心。你可以试试。另外这单被鸽了。所以点名安徽医科大学某心理学专业在读学生。
+
+3. 待续
