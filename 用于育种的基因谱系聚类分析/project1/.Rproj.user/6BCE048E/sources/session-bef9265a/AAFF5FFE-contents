@@ -1,0 +1,321 @@
+---
+title: "familyfenxi"
+author: "AuraVan"
+date: "2025-03-19"
+output: html_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+```
+
+```{r}
+library(ggplot2)
+library(dplyr) # A Grammar of Data Manipulation
+library(ggtree) # an R package for visualization of tree and annotation data
+library(ape) # Analyses of Phylogenetics and Evolution
+library(vegan) # Community Ecology Package
+library(reshape2) # Flexibly Reshape Data: A Reboot of the Reshape Package
+
+```
+## ggtree安装脚本
+```{r}
+# if (!requireNamespace("BiocManager", quietly = TRUE))
+#     install.packages("BiocManager")
+# BiocManager::install("ggtree")
+```
+
+
+## 载入数据
+## 处理A矩阵
+```{r}
+#heatmap(Amat)
+Amat<- read.csv("A_matrix.csv",header = 1,row.names = 1)
+# <- Amat %>%
+#  column_to_rownames(var = names(Amat)[1])
+#Amat<-as.matrix(Amat)
+```
+
+## 处理F4A数据
+```{r}
+f4amat<- read.csv("f4A.csv",header = 1,row.names = 1)
+f4amat<- as.matrix(f4amat)
+heatmap(f4amat)
+```
+
+
+## 数据处理-转置
+
+```{r}
+#导入表型数据
+library(readxl)
+library(tidyverse)
+library(tidyr)
+bxsj <- read_excel("表型数据.xls")
+#bxsj
+# 添加行号以区分同一组内的不同值
+bxsj <- bxsj %>%
+  group_by(IND) %>%
+  mutate(Row = row_number()) %>%
+  ungroup()
+
+# 转置表型数据
+transposed_bxsj <- bxsj %>%
+  pivot_wider(names_from = Row, values_from = weight, names_prefix = "weight_")
+transposed_bxsj
+```
+
+## 表型数据清洗
+```{r}
+df1<-transposed_bxsj
+df1 <- df1 %>%
+  mutate(across(where(is.numeric), ~ as.numeric(replace_na(., 0))))
+df1 <- df1 %>%
+  column_to_rownames(var = names(df1)[1])
+df1_dist <- vegdist(df1,method = 'bray',)
+df1_hc <- hclust(df1_dist,method="average")
+df1_tree <- as.phylo(df1_hc)
+# 用 0 填充缺失值
+
+```
+
+## 筛选22年数据
+```{r}
+library(dplyr)
+
+F22_data <- transposed_bxsj %>%
+  filter(startsWith(IND, "F22"))
+F22_data <- F22_data %>%
+  mutate(across(where(is.numeric), ~ as.numeric(replace_na(., 0))))
+F22_data <- F22_data %>%
+  column_to_rownames(var = names(F22_data)[1])
+F22_data
+df1_dist <- vegdist(F22_data,method = 'bray',)
+df1_hc <- hclust(df1_dist,method="average")
+df1_tree <- as.phylo(df1_hc)
+
+```
+
+## 增加分组信息
+```{r}
+# 假设你的数据框是 df1，且第一列是样本名
+sample_names <- rownames(df1) # 提取样本名
+
+# 定义一个函数，根据前缀分配组
+assign_period <- function(sample_name) {
+  prefix <- substr(sample_name, 1, 3)  # 提取前 3 个字符（如 F18）
+  switch(prefix,
+         "F18" = "Period2018",
+         "F19" = "Period2019",
+         "F20" = "Period2020",
+         "F21" = "Period2021",
+         "F22" = "Period2022",
+         "Other")  # 默认分组
+}
+
+# 应用函数，为每个样本分配组
+Period <- sapply(sample_names, assign_period)
+
+# 将分组信息转换为列表格式
+Period_list <- split(names(Period), Period)
+
+tree1 <- groupOTU(df1_tree, Period_list)
+```
+
+
+## 画树状图
+```{r}
+p11 <- ggtree(tree1,size=0.6, branch.length="none",
+       aes(color=group), show.legend = F)+
+  #标签
+  geom_tiplab(aes(color=group),size=3,angle = 90,
+              offset = 0.1, show.legend = F)+
+  #反转方向
+  coord_flip()+
+  # #调整树的x轴范围以使得标签显示完全
+  xlim(NA, 100)
+  #自定义颜色
+  #scale_color_manual(values = c("black","#e3ac6d","#9d7bb8","#6caf83","#d9586e","#3c74bb","#f85b2b","grey"))
+p11
+```
+## 整理boxplot数据
+```{r}
+#df1 <- df1 %>%
+#  rownames_to_column(var = "sample")
+df1$sample <- rownames(df1)
+df1_F1 <- melt(df1[c(1:40,46)], id.vars = "sample")
+df1_F1$Facet <- "FacetA"
+#df1_F2 <- melt(df1[c(16:30,46)], id.vars = "sample")
+#df1_F2$Facet <- "FacetB"
+#df1_F3 <- melt(df1[c(31:40,46)], id.vars = "sample")
+#df1_F3$Facet <- "FacetC"
+#合并数据
+#df1_boxplot <- rbind(df1_F1,df1_F2,df1_F3)
+df1_boxplot <- rbind(df1_F1)
+```
+## 画boxplot图
+注意如果画图失败，先运行上面全部代码 ，再运行下面这段代码
+```{r}
+f1 <- data.frame(
+  sample = c("F22052","F22094","F22044","F22069","F22038","F22079","F22101","F22015","F22033"),
+  Period = rep("Feature1")
+)
+f2 <- data.frame(
+  sample = c("F22064","F22067","F22075","F22061","F22026","F22058","F22036","F22020","F22045","F22068","F22073","F2090","F22092","F22080","F22083","F22048","F22071","F22053","F22076","F22056","F22086","F22079","F22099","F22040","F22059","F22019","F22035","F22046","F22027","F22032","F22012","F22095"),
+  Period = rep("Feature2")
+)
+f3 <- data.frame(
+  sample = c("F22088","F22055","F22021","F22042","F22025","F22034","F22006","F22077","F22081","F22062","F22084","F22087","F22082","F22022","F22041","F22018","F22009","F22005","F22011","F22023","F22054","F22066","F22074","F22098","F22096","F22003","F220060","F22007","F22017","F22008","F22030","F22050"),
+  Period = rep("Feature3")
+)
+f4 <- data.frame(
+  sample = c("F22031","F22001","F22065","F22085","F22091","F22063","F22016","F22051","F22093","F22078","F22043","F22028","F22039","F22004","F22002","F22010","F22029","F22057","F22049","F22047","F22070","F22072","F22037","F22024","F22013","F22014","F220089"),
+  Period = rep("Feature4")
+)
+
+
+
+# group1 <- rbind(Period18,Period19,Period20,Period21,Period22)
+group1 <- rbind(f1,f2,f3,f4)
+df1_boxplot <- merge(df1_boxplot, group1, by = "sample")
+p22 <- ggplot(df1_boxplot, aes(sample, value))+
+  ##分面
+  facet_wrap(~Facet, nrow = 1, scales = "free")+
+  #添加误差线
+  stat_boxplot(geom = "errorbar", width=0.4)+
+  #绘制箱线图
+  geom_boxplot(aes(fill=Period))+
+  #自定义颜色
+  scale_fill_manual(values = c("#e3ac6d","#9d7bb8","#6caf83","#d9586e"))+
+  #主题相关设置
+  labs(x=NULL, y="This is y-axis")+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size = 10, color = "black"), 
+        axis.title = element_text(size = 13, color = "black"),
+        strip.background = element_blank(),  # 去除分面标签背景（黑框）
+        strip.text = element_text(size = 10, hjust = 0, vjust = 1),  # 设置分面标签文字大小并左对齐
+        strip.placement = "outside",  # 将分面标签放置在图形外侧
+        strip.text.x = element_text(margin = margin(t = 5, b = 5)),  # 调整分面标签的上下边距
+        panel.spacing = unit(1, "lines"))
+p22
+```
+
+###合并图
+
+```{r}
+library(aplot) # Decorate a 'ggplot' with Associated Information
+p22 %>% insert_bottom(p11, height = 0.3)
+```
+
+
+
+# 参考资料
+
+```{r}
+df <- read.table("data.txt", header = 1, check.names = F, sep = "\t", row.names = 1)
+#查看数据
+library(DT)
+```
+
+```{r}
+# datatable(df, filter = "top")
+df_dist <- vegdist(df,method = 'bray')
+df_hc <- hclust(df_dist,method="average")
+df_tree <- as.phylo(df_hc)
+##构建分组信息（这里小编随意构造，大家以实际数据分组为主）
+Period <- list(PeriodA=c("sample17","sample06","sample18","sample25","sample22"),
+               PeriodB=c("sample12","sample24","sample14"),
+               PeriodC=c("sample20","sample16"),
+               PeriodD=c("sample05","sample02","sample21","sample04","sample03"),
+               PeriodE=c("sample15","sample08","sample07","sample01"),
+               PeriodF=c("sample23","sample13","sample09"),
+               PeriodG=c("sample10","sample11","sample19"))
+tree<-groupOTU(df_tree,Period)
+
+df$sample <- rownames(df)
+##为了方便展示分面，这里将group1-5构造为FacetA，group6-12构造为FacetB,group13-20构造为FacetC
+df_F1 <- melt(df[c(1:5,21)], id.vars = "sample")
+df_F1$Facet <- "FacetA"
+df_F2 <- melt(df[c(6:12,21)], id.vars = "sample")
+df_F2$Facet <- "FacetB"
+df_F3 <- melt(df[c(13:20,21)], id.vars = "sample")
+df_F3$Facet <- "FacetC"
+#合并数据
+df_boxplot <- rbind(df_F1,df_F2,df_F3)
+#加入分组等信息(随意构造)
+PeriodA <- data.frame(
+  sample = c("sample17","sample06","sample18","sample25","sample22"),
+  Period = rep("PeriodA")
+)
+PeriodB <- data.frame(
+  sample = c("sample12","sample24","sample14"),
+  Period = rep("PeriodB")
+)
+PeriodC <- data.frame(
+  sample = c("sample20","sample16"),
+  Period = rep("PeriodC")
+)
+PeriodD <- data.frame(
+  sample = c("sample05","sample02","sample21","sample04","sample03"),
+  Period = rep("PeriodD")
+)
+PeriodE <- data.frame(
+  sample = c("sample15","sample08","sample07","sample01"),
+  Period = rep("PeriodE")
+)
+PeriodF <- data.frame(
+  sample = c("sample23","sample13","sample09"),
+  Period = rep("PeriodF")
+)
+PeriodG <- data.frame(
+  sample = c("sample10","sample11","sample19"),
+  Period = rep("PeriodG")
+)
+group <- rbind(PeriodA,PeriodB,PeriodC,PeriodD,PeriodE,PeriodF,PeriodG)
+df_boxplot <- merge(df_boxplot, group, by = "sample")
+#查看数据
+datatable(df_boxplot, filter = "top")
+```
+
+```{r}
+##进化树
+p1 <- ggtree(tree,size=0.6, branch.length="none",
+       aes(color=group), show.legend = F)+
+  #标签
+  geom_tiplab(aes(color=group),size=3,angle = 90,
+              offset = 0.1, show.legend = F)+
+  #反转方向
+  coord_flip()+
+  # #调整树的x轴范围以使得标签显示完全
+  xlim(NA, 20)+
+  #自定义颜色
+  scale_color_manual(values = c("black","#e3ac6d","#9d7bb8","#6caf83","#d9586e","#3c74bb","#f85b2b","grey"))
+p1
+```
+
+```{r}
+p2 <- ggplot(df_boxplot, aes(sample, value))+
+  ##分面
+  facet_wrap(~Facet, nrow = 3, scales = "free")+
+  #添加误差线
+  stat_boxplot(geom = "errorbar", width=0.4)+
+  #绘制箱线图
+  geom_boxplot(aes(fill=Period))+
+  #自定义颜色
+  scale_fill_manual(values = c("#e3ac6d","#9d7bb8","#6caf83","#d9586e","#3c74bb","#f85b2b","grey"))+
+  #主题相关设置
+  labs(x=NULL, y="This is y-axis")+
+  theme_classic()+
+  theme(axis.text.x = element_blank(),
+        axis.ticks.x = element_blank(),
+        axis.text.y = element_text(size = 10, color = "black"), 
+        axis.title = element_text(size = 13, color = "black"),
+        strip.background = element_blank(),  # 去除分面标签背景（黑框）
+        strip.text = element_text(size = 10, hjust = 0, vjust = 1),  # 设置分面标签文字大小并左对齐
+        strip.placement = "outside",  # 将分面标签放置在图形外侧
+        strip.text.x = element_text(margin = margin(t = 5, b = 5)),  # 调整分面标签的上下边距
+        panel.spacing = unit(1, "lines"))
+p2
+```

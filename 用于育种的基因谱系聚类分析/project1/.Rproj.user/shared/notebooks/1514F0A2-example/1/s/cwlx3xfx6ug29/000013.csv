@@ -1,0 +1,2 @@
+"0","library(aplot) # Decorate a 'ggplot' with Associated Information"
+"0","p22 %>% insert_bottom(p11, height = 0.3)"

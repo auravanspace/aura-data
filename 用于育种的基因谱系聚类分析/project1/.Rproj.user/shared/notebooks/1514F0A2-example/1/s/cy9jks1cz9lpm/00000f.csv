@@ -1,0 +1,5 @@
+"0","#heatmap(Amat)"
+"0","Amat<- read.csv(""A_matrix.csv"",header = 1,row.names = 1)"
+"0","# <- Amat %>%"
+"0","#  column_to_rownames(var = names(Amat)[1])"
+"0","#Amat<-as.matrix(Amat)"

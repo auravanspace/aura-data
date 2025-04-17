@@ -1,0 +1,4 @@
+"0","df1_dist <- vegdist(F22_data,method = 'bray',)"
+"0","df1_hc <- hclust(df1_dist,method=""average"")"
+"0","df1_tree <- as.phylo(df1_hc)"
+"0",""

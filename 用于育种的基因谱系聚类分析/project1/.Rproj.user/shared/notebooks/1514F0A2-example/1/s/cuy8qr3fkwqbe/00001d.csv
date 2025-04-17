@@ -1,0 +1,3 @@
+"0","f4amat<- read.csv(""f4A.csv"",header = 1,row.names = 1)"
+"0","f4amat<- as.matrix(f4amat)"
+"0","heatmap(f4amat)"
